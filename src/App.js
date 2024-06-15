@@ -5,12 +5,21 @@ import Editor from "./components/Editor";
 import { compileCode } from "./apis/compiler";
 import Sidebar from "./components/Sidebar";
 import Chat from "./components/Chat";
+import { initSocket } from "./utils/socket";
+import USER from "./constants/user";
+import CODE from "./constants/code";
 
 function App() {
   const editorRef = useRef(null);
+  const socketRef = useRef(null);
+  // const roomId = `roomId-${Math.ceil(Math.random() * 100000)}`;
+  const roomId = `roomId-1`;
+  const userName = `Abhishek_${Math.floor(Math.random() * 100000)}`;
+  const [users, setUsers] = useState([]);
   const [code, setCode] = useState(
     "// <CodeDevTogether/> \n// Developed by: Abhishek Chorotiya \n\n function helloWorld() {\n\n  //write your logic here... \n\n  console.log('Hello World!')\n\n  return;\n } \n\n\n helloWorld()"
   );
+  // const [code, setCode] = useState("");
 
   const [output, setOutput] = useState("");
 
@@ -20,6 +29,76 @@ function App() {
       setOutput(res);
     }
   };
+
+  const handleCode = (code) => {
+    socketRef.current.emit(CODE.CHANGE, {
+      code,
+      roomId,
+    })
+    setCode(code);
+  }
+
+  useEffect(() => {
+    if(socketRef.current){
+      socketRef.current.on(USER.JOINED, ({ clients, username, socketId }) => {
+        if (username !== userName) {
+          console.log(`${username} joined`);
+          console.log('sending sync code', code);
+          socketRef.current.emit(CODE.SYNC, {
+            code,
+            socketId,
+          });
+        }
+        setUsers(clients);
+
+      });
+    }
+
+    return () => {
+      socketRef.current.off(USER.JOINED);
+      socketRef.current.off(CODE.SYNC);
+    }
+
+  }, [code]);
+
+  useEffect(() => {
+    const init = async () => {
+      socketRef.current = await initSocket();
+      socketRef.current.on("connect_error", (err) => handleErrors(err));
+      socketRef.current.on("connect_failed", (err) => handleErrors(err));
+
+      function handleErrors(e) {
+        console.log("socket error", e);
+      }
+
+      socketRef.current.emit(USER.JOIN, {
+        roomId,
+        username: userName,
+      });
+
+
+
+      socketRef.current.on(CODE.CHANGE, ({ code }) => {
+        // console.log("code changed", code);
+        setCode(code);
+      });
+
+      socketRef.current.on(USER.LEAVE, ({ socketId, username }) => {
+        setUsers((prev) => {
+          console.log(username, "left");
+          return prev.filter((user) => user.socketId !== socketId);
+        });
+      });
+    };
+    init();
+
+    return () => {  
+      socketRef.current.disconnect();
+      socketRef.current.off(USER.JOINED);
+      socketRef.current.off(USER.LEAVE);
+      socketRef.current.off(CODE.CHANGE);
+    };
+  }, []);
 
   return (
     <div className="pl-[72px] flex relative w-screen h-screen bg-foreground p-2 gap-2">
@@ -32,7 +111,7 @@ function App() {
           />
         </div>
         <div className="w-full bg-[#1E1E1E] rounded-[4px] flex h-full relative overflow-y-scroll">
-          <Editor ref={editorRef} code={code} setCode={setCode} />
+          <Editor ref={editorRef} code={code} setCode={handleCode} />
         </div>
       </div>
       <div className="bg-background/50 rounded-md p-2 flex gap-2 flex-col">
