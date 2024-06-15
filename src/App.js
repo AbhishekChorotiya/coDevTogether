@@ -1,62 +1,29 @@
-import {
-  ChevronDown,
-  ChevronRight,
-  ClipboardPlus,
-  Play,
-  SendHorizontal,
-  Share2,
-  User,
-  X,
-} from "lucide-react";
+import { ChevronDown, Play } from "lucide-react";
 import "./App.css";
 import { useEffect, useRef, useState } from "react";
 import Editor from "./components/Editor";
 import { compileCode } from "./apis/compiler";
+import Sidebar from "./components/Sidebar";
+import Chat from "./components/Chat";
 
 function App() {
   const editorRef = useRef(null);
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(
+    "// <CodeDevTogether/> \n// Developed by: Abhishek Chorotiya \n\n function helloWorld() {\n\n  //write your logic here... \n\n  console.log('Hello World!')\n\n  return;\n } \n\n\n helloWorld()"
+  );
 
-  const handleRun = () => {
-    compileCode(code);
-  };
+  const [output, setOutput] = useState("");
 
-  useEffect(() => {
-    if (editorRef.current) {
-      console.log(editorRef.current);
+  const handleRun = async () => {
+    const res = await compileCode(code);
+    if (res) {
+      setOutput(res);
     }
-  }, [editorRef]);
+  };
 
   return (
     <div className="pl-[72px] flex relative w-screen h-screen bg-foreground p-2 gap-2">
-      <div className="min-w-16 fixed left-0 top-0 h-full justify-between bg-background/50 flex flex-col gap-2 p-2">
-        <div className="flex flex-col gap-2">
-          <div className="w-full cursor-pointer aspect-square rounded-full bg-foreground flex items-center justify-center">
-            <ChevronRight color="#1d3557" />
-          </div>
-          <span className="w-full h-[1px] bg-foreground" />
-          <div className="w-full aspect-square rounded-full bg-foreground flex items-center justify-center overflow-hidden">
-            <User className="w-8" color="#1d3557" />
-          </div>
-          <div className="w-full aspect-square rounded-full bg-foreground flex items-center justify-center overflow-hidden">
-            <User className="w-8" color="#1d3557" />
-          </div>
-          <div className="w-full aspect-square rounded-full bg-foreground flex items-center justify-center overflow-hidden">
-            <User className="w-8" color="#1d3557" />
-          </div>
-          <div className="w-full aspect-square rounded-full bg-foreground flex items-center justify-center overflow-hidden">
-            <User className="w-8" color="#1d3557" />
-          </div>
-        </div>
-        <div className="flex flex-col gap-2">
-          <div className="w-full cursor-pointer aspect-square rounded-full bg-foreground flex items-center justify-center">
-            <ClipboardPlus color="#1d3557" className="w-5" />
-          </div>
-          <div className="w-full cursor-pointer aspect-square rounded-full bg-[#EE4B2B] flex items-center justify-center">
-            <X color="white" />
-          </div>
-        </div>
-      </div>
+      <Sidebar />
       <div className="w-full bg-background/50 rounded-md p-2 flex flex-col gap-2">
         <div className="w-full bg-foreground rounded-[4px] overflow-hidden h-28">
           <textarea
@@ -89,22 +56,25 @@ function App() {
           <Dropdown />
         </div>
 
-        <div className="w-full bg-foreground rounded-[4px] h-full"></div>
-      </div>
-
-      <div className="min-w-[25%] bg-background/50 rounded-md p-2 flex-col flex relative overflow-hidden">
-        <div className="p-2 absolute bottom-0 left-0 w-full flex gap-2">
-          <div className="w-full bg-foreground overflow-hidden p-2 rounded-full h-12">
-            <input
-              className="w-full text-sm h-full text-primary bg-transparent px-2 outline-none placeholder:text-secondary"
-              placeholder="Type your massage here..."
-            />
-          </div>
-          <div className="w-14 cursor-pointer flex items-center justify-center rounded-full bg-foreground aspect-square">
-            <SendHorizontal color="#1d3557" className="w-5" />
+        <div className="w-full bg-foreground rounded-[4px] h-full p-2">
+          <h1 className="text-primary font-semibold text-xl mb-4">Output</h1>
+          <div className="w-full flex text-sm flex-col overflow-y-scroll h-full">
+            {output.stderr
+              ? output?.stderr?.split("\n")?.map((item, i) => (
+                  <span className="text-primary" key={i}>
+                    {item}
+                  </span>
+                ))
+              : output?.stdout?.split("\n")?.map((item, i) => (
+                  <span className="text-primary" key={i}>
+                    {item}
+                  </span>
+                ))}
           </div>
         </div>
       </div>
+
+      <Chat />
     </div>
   );
 }
