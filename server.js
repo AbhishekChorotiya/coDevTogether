@@ -37,14 +37,36 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on(CODE.SYNC, ({ code, socketId }) => {
+  socket.on(CODE.SYNC, ({ code,question, socketId }) => {
     console.log('sync request',usersMap[socketId]);
     io.to(socketId).emit(CODE.CHANGE, { code });
+    io.to(socketId).emit(USER.QUESTON, { question });
+  });
+
+  socket.on(USER.QUESTON, ({ question, roomId }) => {
+    console.log('question',question);
+    const clients = getClientsInRoom(roomId);
+    clients.forEach(({ socketId }) => {
+      if(socketId !== socket.id) io.to(socketId).emit(USER.QUESTON, { question });
+    });
   });
 
   socket.on(CODE.CHANGE, ({ code,roomId }) => {
     console.log('code change',code);
     socket.in(roomId).emit(CODE.CHANGE, { code });
+  });
+
+  socket.on(USER.MESSAGE, ({ message, roomId }) => {
+    console.log('message',message);
+    const clients = getClientsInRoom(roomId);
+    const time = Date.now();
+    clients.forEach(({ socketId }) => {
+      if(socketId !== socket.id) io.to(socketId).emit(USER.MESSAGE, {
+        message,
+        username: usersMap[socket.id],
+        time
+      });
+    });
   });
 
   socket.on("disconnecting", () => {

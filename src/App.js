@@ -22,6 +22,8 @@ function App() {
   // const [code, setCode] = useState("");
 
   const [output, setOutput] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [question, setQuestion] = useState("");
 
   const handleRun = async () => {
     const res = await compileCode(code);
@@ -38,14 +40,23 @@ function App() {
     setCode(code);
   }
 
+  const handleQuestion = (e) => {
+    socketRef.current.emit(USER.QUESTON, {
+      question: e.target.value,
+      roomId,
+    })
+    setQuestion(e.target.value);
+  }
+
   useEffect(() => {
-    if(socketRef.current){
+    if (socketRef.current) {
       socketRef.current.on(USER.JOINED, ({ clients, username, socketId }) => {
         if (username !== userName) {
           console.log(`${username} joined`);
           console.log('sending sync code', code);
           socketRef.current.emit(CODE.SYNC, {
             code,
+            question,
             socketId,
           });
         }
@@ -59,7 +70,7 @@ function App() {
       socketRef.current.off(CODE.SYNC);
     }
 
-  }, [code]);
+  }, [code, question]);
 
   useEffect(() => {
     const init = async () => {
@@ -76,11 +87,17 @@ function App() {
         username: userName,
       });
 
-
-
       socketRef.current.on(CODE.CHANGE, ({ code }) => {
-        // console.log("code changed", code);
         setCode(code);
+      });
+
+      socketRef.current.on(USER.MESSAGE, ({ message, username,time }) => {
+        console.log("message", message, username);
+        setMessages((prev) => [...prev, { message, username,time }]);
+      });
+      socketRef.current.on(USER.QUESTON, ({ question }) => {
+        console.log("question", question);
+        setQuestion(question);
       });
 
       socketRef.current.on(USER.LEAVE, ({ socketId, username }) => {
@@ -92,7 +109,7 @@ function App() {
     };
     init();
 
-    return () => {  
+    return () => {
       socketRef.current.disconnect();
       socketRef.current.off(USER.JOINED);
       socketRef.current.off(USER.LEAVE);
@@ -101,13 +118,15 @@ function App() {
   }, []);
 
   return (
-    <div className="pl-[72px] flex relative w-screen h-screen bg-foreground p-2 gap-2">
+    <div className="pl-[72px] max-h-screen overflow-y-hidden flex relative w-screen h-screen bg-foreground p-2 gap-2">
       <Sidebar />
       <div className="w-full bg-background/50 rounded-md p-2 flex flex-col gap-2">
         <div className="w-full bg-foreground rounded-[4px] overflow-hidden h-28">
           <textarea
             className="w-full text-sm min-h-full resize-none p-2 outline-none text-primary bg-transparent font-semibold placeholder:text-secondary placeholder:font-normal"
             placeholder="Type or Paste Your Question Here..."
+            value={question}
+            onChange={handleQuestion}
           />
         </div>
         <div className="w-full bg-[#1E1E1E] rounded-[4px] flex h-full relative overflow-y-scroll">
@@ -117,7 +136,7 @@ function App() {
       <div className="bg-background/50 rounded-md p-2 flex gap-2 flex-col">
         <div className="w-full items-center justify-center min-h-24 bg-foreground rounded-[4px] flex  overflow-hidden">
           <h1 className="text-primary font-semibold text-xl">
-            {"<CodeDevTogether/>"}
+            {"<CoDevTogether/>"}
           </h1>
         </div>
         <div className="w-full justify-between bg-foreground rounded-[4px] px-2 gap-2 flex items-center min-h-12">
@@ -140,20 +159,20 @@ function App() {
           <div className="w-full flex text-sm flex-col overflow-y-scroll h-full">
             {output.stderr
               ? output?.stderr?.split("\n")?.map((item, i) => (
-                  <span className="text-primary" key={i}>
-                    {item}
-                  </span>
-                ))
+                <span className="text-primary" key={i}>
+                  {item}
+                </span>
+              ))
               : output?.stdout?.split("\n")?.map((item, i) => (
-                  <span className="text-primary" key={i}>
-                    {item}
-                  </span>
-                ))}
+                <span className="text-primary" key={i}>
+                  {item}
+                </span>
+              ))}
           </div>
         </div>
       </div>
 
-      <Chat />
+      <Chat socketRef={socketRef} roomId={roomId} messages={messages} setMessages={setMessages} />
     </div>
   );
 }

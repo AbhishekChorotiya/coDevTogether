@@ -5,6 +5,7 @@ const USER = {
   MESSAGE: "message",
   FOCUS_ON: "focus-on",
   FOCUS_OFF: "focus-off",
+  QUESTON: "question",
 };
 
 module.exports = USER;
