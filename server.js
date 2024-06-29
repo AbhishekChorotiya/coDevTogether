@@ -15,6 +15,7 @@ function getClientsInRoom(roomId) {
       return {
         socketId,
         username: usersMap[socketId],
+        focus: true,
       };
     }
   );
@@ -27,7 +28,7 @@ io.on("connection", (socket) => {
     socket.join(roomId);
 
     const clients = getClientsInRoom(roomId);
-    console.log('clients', clients);
+    console.log("clients", clients);
     clients.forEach(({ socketId }) => {
       io.to(socketId).emit(USER.JOINED, {
         username,
@@ -37,35 +38,61 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on(CODE.SYNC, ({ code,question, socketId }) => {
-    console.log('sync request',usersMap[socketId]);
+  socket.on(CODE.SYNC, ({ code, question, socketId, users }) => {
+    console.log("sync request", usersMap[socketId]);
+    console.log("users", users);
     io.to(socketId).emit(CODE.CHANGE, { code });
     io.to(socketId).emit(USER.QUESTON, { question });
   });
 
   socket.on(USER.QUESTON, ({ question, roomId }) => {
-    console.log('question',question);
+    console.log("question", question);
     const clients = getClientsInRoom(roomId);
     clients.forEach(({ socketId }) => {
-      if(socketId !== socket.id) io.to(socketId).emit(USER.QUESTON, { question });
+      if (socketId !== socket.id)
+        io.to(socketId).emit(USER.QUESTON, { question });
     });
   });
 
-  socket.on(CODE.CHANGE, ({ code,roomId }) => {
-    console.log('code change',code);
+  socket.on(CODE.CHANGE, ({ code, roomId }) => {
+    console.log("code change", code);
     socket.in(roomId).emit(CODE.CHANGE, { code });
   });
 
-  socket.on(USER.MESSAGE, ({ message, roomId }) => {
-    console.log('message',message);
+  socket.on("FOCUS", ({ id, focus, roomId }) => {
+    console.log("focus-->", focus, usersMap[id], roomId);
+    socket.in(roomId).emit("FOCUS", {
+      id,
+      focus,
+    });
+  });
+
+  socket.on(USER.MESSAGE, ({ message, roomId, type }) => {
+    console.log("message", message, type);
     const clients = getClientsInRoom(roomId);
     const time = Date.now();
     clients.forEach(({ socketId }) => {
-      if(socketId !== socket.id) io.to(socketId).emit(USER.MESSAGE, {
-        message,
-        username: usersMap[socket.id],
-        time
-      });
+      if (socketId !== socket.id)
+        io.to(socketId).emit(USER.MESSAGE, {
+          message,
+          username: usersMap[socket.id],
+          type,
+          time,
+        });
+    });
+  });
+
+  socket.on(USER.FOCUS_ON, ({ roomId }) => {
+    console.log("focus on", usersMap[socket.id]);
+    socket.in(roomId).emit(USER.FOCUS_ON, {
+      socketId: socket.id,
+    });
+  });
+
+  socket.on(USER.FOCUS_OFF, ({ roomId }) => {
+    console.log("focus off", usersMap[socket.id]);
+    socket.in(roomId).emit(USER.FOCUS_OFF, {
+      socketId: socket.id,
     });
   });
 
@@ -77,13 +104,10 @@ io.on("connection", (socket) => {
         username: usersMap[socket.id],
       });
     });
-    console.log('user leaving', usersMap[socket.id]);
+    console.log("user leaving", usersMap[socket.id]);
     delete usersMap[socket.id];
     socket.leave();
   });
-
-
-
 });
 
 const PORT = process.env.PORT || 5000;

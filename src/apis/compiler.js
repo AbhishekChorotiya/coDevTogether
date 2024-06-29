@@ -1,14 +1,26 @@
 import axios from "axios";
 
-export const compileCode = async (code) => {
+export const compileCode = async (code, language) => {
+  const getFileName = () => {
+    if (language === "java") {
+      return "Main.java";
+    } else if (language === "python") {
+      return "Main.py";
+    } else if (language === "cpp") {
+      return "Main.cpp";
+    } else {
+      return "HelloWorld.js";
+    }
+  };
   try {
     let bodyContent = {
       code: code,
-      language: "javascript",
+      language: language,
+      fileName: getFileName(),
     };
 
     let reqOptions = {
-      url: "http://localhost:4000/api/compile",
+      url: `http://${process.env.REACT_APP_BACKEND_COMPILER}/api/compile`,
       method: "POST",
       data: bodyContent,
     };

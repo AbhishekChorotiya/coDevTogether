@@ -8,6 +8,8 @@ import Chat from "./components/Chat";
 import { initSocket } from "./utils/socket";
 import USER from "./constants/user";
 import CODE from "./constants/code";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
   const editorRef = useRef(null);
@@ -24,53 +26,60 @@ function App() {
   const [output, setOutput] = useState("");
   const [messages, setMessages] = useState([]);
   const [question, setQuestion] = useState("");
+  const [themeColor, setThemeColor] = useState(
+    localStorage?.getItem("theme") || "blue"
+  );
+  const [language, setLanguage] = useState("javascript");
+
+  useEffect(() => {
+    if (language === "javascript") {
+      setCode(
+        `// <CodeDevTogether/> \n// Developed by: Abhishek Chorotiya \n\n function helloWorld() {\n\n  //write your logic here... \n\n  console.log('Hello World!')\n\n  return;\n } \n\n\n helloWorld()`
+      );
+    }
+    if (language === "python") {
+      setCode(
+        `# <CodeDevTogether/> \n# Developed by: Abhishek Chorotiya \n\nprint("Hello World!")`
+      );
+    }
+    if (language === "cpp") {
+      setCode(
+        `// <CodeDevTogether/> \n// Developed by: Abhishek Chorotiya \n\n#include <iostream>\n\nusing namespace std;\n\nint main() {\n\n  cout << "Hello, World!";\n  return 0;\n\n};\n`
+      );
+    }
+    if (language === "java") {
+      setCode(
+        `// <CodeDevTogether/> \n// Developed by: Abhishek Chorotiya \n\npublic class HelloWorld {\n\n  public static void main(String[] args) {\n\n    System.out.println("Hello World!");\n\n  }\n\n}`
+      );
+    }
+  }, [language]);
 
   const handleRun = async () => {
-    const res = await compileCode(code);
+    const res = await compileCode(code, language);
     if (res) {
       setOutput(res);
+      socketRef.current.emit(USER.MESSAGE, {
+        message: `${userName} ran the code`,
+        type: "alert",
+        roomId,
+      });
     }
   };
-
   const handleCode = (code) => {
     socketRef.current.emit(CODE.CHANGE, {
       code,
       roomId,
-    })
+    });
     setCode(code);
-  }
+  };
 
   const handleQuestion = (e) => {
     socketRef.current.emit(USER.QUESTON, {
       question: e.target.value,
       roomId,
-    })
+    });
     setQuestion(e.target.value);
-  }
-
-  useEffect(() => {
-    if (socketRef.current) {
-      socketRef.current.on(USER.JOINED, ({ clients, username, socketId }) => {
-        if (username !== userName) {
-          console.log(`${username} joined`);
-          console.log('sending sync code', code);
-          socketRef.current.emit(CODE.SYNC, {
-            code,
-            question,
-            socketId,
-          });
-        }
-        setUsers(clients);
-
-      });
-    }
-
-    return () => {
-      socketRef.current.off(USER.JOINED);
-      socketRef.current.off(CODE.SYNC);
-    }
-
-  }, [code, question]);
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -91,13 +100,82 @@ function App() {
         setCode(code);
       });
 
-      socketRef.current.on(USER.MESSAGE, ({ message, username,time }) => {
-        console.log("message", message, username);
-        setMessages((prev) => [...prev, { message, username,time }]);
-      });
+      socketRef.current.on(
+        USER.MESSAGE,
+        ({ message, username, time, type }) => {
+          setMessages((prev) => [...prev, { message, username, time, type }]);
+        }
+      );
       socketRef.current.on(USER.QUESTON, ({ question }) => {
         console.log("question", question);
         setQuestion(question);
+      });
+
+      socketRef.current.on(USER.JOINED, ({ clients, username, socketId }) => {
+        console.log("clients", clients);
+        toast(`${username} joined`);
+        if (username !== userName) {
+          console.log(`${username} joined`);
+          socketRef.current.emit(CODE.SYNC, {
+            code,
+            question,
+            socketId,
+          });
+          socketRef.current.emit("FOCUS", {
+            id: socketRef.current.id,
+            focus:
+              users?.find((user) => user.socketId === socketId)?.focus || false,
+            roomId,
+          });
+        }
+        setUsers(clients);
+      });
+
+      socketRef.current.on("FOCUS", ({ id, focus }) => {
+        console.log("Focus-->", id, focus);
+
+        setUsers((prev) => {
+          return prev?.map((user) => {
+            if (user.socketId === id) {
+              return {
+                ...user,
+                focus,
+              };
+            }
+            return user;
+          });
+        });
+      });
+
+      socketRef.current.on(USER.FOCUS_OFF, ({ socketId }) => {
+        console.log("focus off", socketId);
+
+        setUsers((prev) => {
+          return prev?.map((user) => {
+            if (user.socketId === socketId) {
+              return {
+                ...user,
+                focus: false,
+              };
+            }
+            return user;
+          });
+        });
+      });
+      socketRef.current.on(USER.FOCUS_ON, ({ socketId }) => {
+        console.log("focus on", socketId);
+
+        setUsers((prev) => {
+          return prev?.map((user) => {
+            if (user.socketId === socketId) {
+              return {
+                ...user,
+                focus: true,
+              };
+            }
+            return user;
+          });
+        });
       });
 
       socketRef.current.on(USER.LEAVE, ({ socketId, username }) => {
@@ -114,13 +192,22 @@ function App() {
       socketRef.current.off(USER.JOINED);
       socketRef.current.off(USER.LEAVE);
       socketRef.current.off(CODE.CHANGE);
+      socketRef.current.off(USER.JOINED);
+      socketRef.current.off(CODE.SYNC);
+      socketRef.current.off("FOCUS");
+      socketRef.current.off(USER.QUESTON);
+      socketRef.current.off(USER.MESSAGE);
+      socketRef.current.off(USER.FOCUS_ON);
+      socketRef.current.off(USER.FOCUS_OFF);
     };
   }, []);
 
   return (
-    <div className="pl-[72px] max-h-screen overflow-y-hidden flex relative w-screen h-screen bg-foreground p-2 gap-2">
-      <Sidebar />
-      <div className="w-full bg-background/50 rounded-md p-2 flex flex-col gap-2">
+    <div
+      className={`pl-[72px] flex relative w-screen h-dvh bg-foreground p-2 gap-2 ${themeColor} transition-colors duration-300`}
+    >
+      <Sidebar socketRef={socketRef} users={users} roomId={roomId} />
+      <div className="w-full bg-background rounded-md p-2 flex flex-col gap-2">
         <div className="w-full bg-foreground rounded-[4px] overflow-hidden h-28">
           <textarea
             className="w-full text-sm min-h-full resize-none p-2 outline-none text-primary bg-transparent font-semibold placeholder:text-secondary placeholder:font-normal"
@@ -130,11 +217,17 @@ function App() {
           />
         </div>
         <div className="w-full bg-[#1E1E1E] rounded-[4px] flex h-full relative overflow-y-scroll">
-          <Editor ref={editorRef} code={code} setCode={handleCode} />
+          <Editor
+            ref={editorRef}
+            code={code}
+            setCode={handleCode}
+            roomId={roomId}
+            language={language}
+          />
         </div>
       </div>
-      <div className="bg-background/50 rounded-md p-2 flex gap-2 flex-col">
-        <div className="w-full items-center justify-center min-h-24 bg-foreground rounded-[4px] flex  overflow-hidden">
+      <div className="bg-background rounded-md p-2 max-h-full flex gap-2 flex-col">
+        <div className="w-full items-center justify-center h-24 shrink-0 bg-foreground rounded-[4px] flex  overflow-hidden">
           <h1 className="text-primary font-semibold text-xl">
             {"<CoDevTogether/>"}
           </h1>
@@ -144,35 +237,50 @@ function App() {
             onClick={handleRun}
             className="bg-secondary w-fit pl-2 pr-3 gap-2 h-9 cursor-pointer right-2 top-2 rounded-[4px] flex items-center justify-center"
           >
-            <Play color="#f1faee" className="w-3" />
+            <Play className="w-3 text-background" />
             <span className="text-background text-xs">Run</span>
           </div>
           <Dropdown
-            options={["JavaScript", "Python", "Java", "C++"]}
+            options={["javascript", "python", "java", "cpp"]}
             placeholder="JavaScript"
+            selected={language}
+            setSelected={setLanguage}
           />
-          <Dropdown />
+          <Dropdown
+            selected={themeColor}
+            setSelected={(theme) => {
+              setThemeColor(theme);
+              localStorage.setItem("theme", theme);
+            }}
+          />
         </div>
 
-        <div className="w-full bg-foreground rounded-[4px] h-full p-2">
+        <div className="w-full bg-foreground flex flex-col overflow-hidden rounded-[4px] h-full p-2">
           <h1 className="text-primary font-semibold text-xl mb-4">Output</h1>
           <div className="w-full flex text-sm flex-col overflow-y-scroll h-full">
-            {output.stderr
-              ? output?.stderr?.split("\n")?.map((item, i) => (
-                <span className="text-primary" key={i}>
-                  {item}
-                </span>
-              ))
-              : output?.stdout?.split("\n")?.map((item, i) => (
-                <span className="text-primary" key={i}>
-                  {item}
-                </span>
-              ))}
+            <div className="w-full flex flex-col">
+              {output.stderr
+                ? output?.stderr?.split("\n")?.map((item, i) => (
+                    <span className="text-primary" key={i}>
+                      {item}
+                    </span>
+                  ))
+                : output?.stdout?.split("\n")?.map((item, i) => (
+                    <span className="text-primary" key={i}>
+                      {item}
+                    </span>
+                  ))}
+            </div>
           </div>
         </div>
       </div>
-
-      <Chat socketRef={socketRef} roomId={roomId} messages={messages} setMessages={setMessages} />
+      <Chat
+        socketRef={socketRef}
+        roomId={roomId}
+        messages={messages}
+        setMessages={setMessages}
+      />
+      <ToastContainer autoClose={2000} />
     </div>
   );
 }
@@ -180,11 +288,13 @@ function App() {
 export default App;
 
 const Dropdown = ({
-  options = ["Blue", "Red", "Dark", "Light", "Green"],
+  options = ["Blue", "Red", "Dark"],
   placeholder = "Blue",
+  selected = "",
+  setSelected = () => {},
 }) => {
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState(null);
+
   const divRef = useRef(null);
   const dropdownRef = useRef(null);
   const handleClickOutside = (event) => {
@@ -204,7 +314,7 @@ const Dropdown = ({
     };
   }, []);
   return (
-    <div className="border w-28 bg-background/50 cursor-pointer border-foreground px-3 py-1 rounded-[4px] relative">
+    <div className="border w-28 bg-background cursor-pointer border-foreground px-3 py-1 rounded-[4px] relative">
       <div
         className="flex items-center gap-2 z-0 justify-between"
         ref={dropdownRef}
@@ -212,24 +322,27 @@ const Dropdown = ({
         <span
           className={`${selected ? "text-primary" : "text-secondary"} text-xs`}
         >
-          {selected ? selected : placeholder}
+          {selected
+            ? `${selected.charAt(0).toUpperCase()}${selected.slice(1)}`
+            : placeholder}
         </span>
-        <ChevronDown color="#457b9d" className="w-5" />
+        <ChevronDown className="w-5 text-primary" />
       </div>
       {open && (
         <div
           ref={divRef}
-          className="w-full left-0 z-[1000] overflow-hidden rounded-[10px] border border-secondary bg-background/50 absolute top-[calc(100%+5px)] flex flex-col"
+          className="w-full left-0 z-[1000] overflow-hidden rounded-[10px] border border-secondary bg-background absolute top-[calc(100%+5px)] flex flex-col"
         >
-          {options.map((option) => (
+          {options.map((option, i) => (
             <div
-              className="flex items-center hover:bg-background p-4 justify-between"
+              key={i}
+              className="flex items-center text-primary hover:bg-secondary hover:text-foreground p-4 justify-between"
               onClick={() => {
-                setSelected(option);
+                setSelected(option.toLowerCase());
                 setOpen(false);
               }}
             >
-              <span className="text-primary text-sm">{option}</span>
+              <span className="text-sm">{option}</span>
             </div>
           ))}
         </div>

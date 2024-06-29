@@ -7,5 +7,5 @@ export const initSocket = async () => {
     timeout: 10000,
     transports: ["websocket"],
   };
-  return io("192.168.0.39:5000", options);
+  return io(process.env.REACT_APP_BACKEND_WS, options);
 };
