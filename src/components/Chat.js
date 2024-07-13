@@ -1,6 +1,6 @@
 import { SendHorizontal } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
-import USER from "../constants/user";
+import USER from "../utils/constants/user";
 
 const Chat = ({ socketRef, roomId, messages, setMessages }) => {
   const [text, setText] = useState("");

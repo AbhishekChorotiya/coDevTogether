@@ -20,7 +20,7 @@ export const compileCode = async (code, language) => {
     };
 
     let reqOptions = {
-      url: `http://${process.env.REACT_APP_BACKEND_COMPILER}/api/compile`,
+      url: `http://192.168.0.141:4000/api/compile`,
       method: "POST",
       data: bodyContent,
     };

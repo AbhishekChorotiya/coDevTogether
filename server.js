@@ -2,8 +2,8 @@ const express = require("express");
 const app = express();
 const http = require("http");
 const { Server } = require("socket.io");
-const USER = require("./src/constants/user");
-const CODE = require("./src/constants/code");
+const USER = require("./src/utils/constants/user");
+const CODE = require("./src/utils/constants/code");
 
 const server = http.createServer(app);
 const io = new Server(server);
@@ -38,10 +38,10 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on(CODE.SYNC, ({ code, question, socketId, users }) => {
+  socket.on(CODE.SYNC, ({ code, question, socketId, users, language }) => {
     console.log("sync request", usersMap[socketId]);
     console.log("users", users);
-    io.to(socketId).emit(CODE.CHANGE, { code });
+    io.to(socketId).emit(CODE.CHANGE, { code, language });
     io.to(socketId).emit(USER.QUESTON, { question });
   });
 
@@ -64,6 +64,13 @@ io.on("connection", (socket) => {
     socket.in(roomId).emit("FOCUS", {
       id,
       focus,
+    });
+  });
+
+  socket.on("LANGUAGE", ({ lang, roomId }) => {
+    console.log("language", lang);
+    socket.in(roomId).emit("LANGUAGE", {
+      lang,
     });
   });
 

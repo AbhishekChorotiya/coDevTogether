@@ -1,6 +1,6 @@
 import { ChevronRight, ClipboardPlus, User, X } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import USER from "../constants/user";
+import USER from "../utils/constants/user";
 
 const Sidebar = ({ users, socketRef, roomId }) => {
   const [toggle, setToggle] = useState(true);
