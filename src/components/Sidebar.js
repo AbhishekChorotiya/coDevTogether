@@ -1,6 +1,7 @@
 import { ChevronRight, ClipboardPlus, User, X } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import USER from "../utils/constants/user";
+import toast from "react-hot-toast";
 
 const Sidebar = ({ users, socketRef, roomId }) => {
   const [toggle, setToggle] = useState(true);
@@ -37,10 +38,24 @@ const Sidebar = ({ users, socketRef, roomId }) => {
             !toggle ? "flex-row-reverse" : "flex-col"
           }`}
         >
-          <div className="w-full shrink-0 max-w-12 cursor-pointer aspect-square rounded-full bg-foreground flex items-center justify-center">
+          <div
+            onClick={() => {
+              navigator?.clipboard?.writeText(window?.location?.href).then(() =>
+                toast.success("Invite link copied to clipboard", {
+                  id: "invite-link",
+                })
+              );
+            }}
+            className="w-full shrink-0 max-w-12 cursor-pointer aspect-square rounded-full bg-foreground flex items-center justify-center"
+          >
             <ClipboardPlus className="w-5 text-primary" />
           </div>
-          <div className="w-full shrink-0 max-w-12 cursor-pointer aspect-square rounded-full bg-[#EE4B2B] flex items-center justify-center">
+          <div
+            onClick={() => {
+              window.location.href = "/";
+            }}
+            className="w-full shrink-0 max-w-12 cursor-pointer aspect-square rounded-full bg-[#EE4B2B] flex items-center justify-center"
+          >
             <X color="white" />
           </div>
         </div>
@@ -66,7 +81,7 @@ const UserProfile = ({ user, toggle, socketRef, roomId }) => {
       });
     };
     const handleBlur = () => {
-      document.title = "On Blur";
+      document.title = "Focus Lost";
       socketRef.current.emit(USER.FOCUS_OFF, {
         roomId,
       });

@@ -4,9 +4,15 @@ const http = require("http");
 const { Server } = require("socket.io");
 const USER = require("./src/utils/constants/user");
 const CODE = require("./src/utils/constants/code");
+const path = require("path");
 
 const server = http.createServer(app);
 const io = new Server(server);
+
+app.use(express.static("build"));
+app.use((req, res, next) => {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
+});
 
 const usersMap = {};
 function getClientsInRoom(roomId) {
@@ -23,12 +29,10 @@ function getClientsInRoom(roomId) {
 
 io.on("connection", (socket) => {
   socket.on(USER.JOIN, ({ username, roomId }) => {
-    console.log("join event", username, roomId);
     usersMap[socket.id] = username;
     socket.join(roomId);
 
     const clients = getClientsInRoom(roomId);
-    console.log("clients", clients);
     clients.forEach(({ socketId }) => {
       io.to(socketId).emit(USER.JOINED, {
         username,
@@ -39,14 +43,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on(CODE.SYNC, ({ code, question, socketId, users, language }) => {
-    console.log("sync request", usersMap[socketId]);
-    console.log("users", users);
     io.to(socketId).emit(CODE.CHANGE, { code, language });
     io.to(socketId).emit(USER.QUESTON, { question });
   });
 
   socket.on(USER.QUESTON, ({ question, roomId }) => {
-    console.log("question", question);
     const clients = getClientsInRoom(roomId);
     clients.forEach(({ socketId }) => {
       if (socketId !== socket.id)
@@ -55,12 +56,10 @@ io.on("connection", (socket) => {
   });
 
   socket.on(CODE.CHANGE, ({ code, roomId }) => {
-    console.log("code change", code);
     socket.in(roomId).emit(CODE.CHANGE, { code });
   });
 
   socket.on("FOCUS", ({ id, focus, roomId }) => {
-    console.log("focus-->", focus, usersMap[id], roomId);
     socket.in(roomId).emit("FOCUS", {
       id,
       focus,
@@ -68,14 +67,12 @@ io.on("connection", (socket) => {
   });
 
   socket.on("LANGUAGE", ({ lang, roomId }) => {
-    console.log("language", lang);
     socket.in(roomId).emit("LANGUAGE", {
       lang,
     });
   });
 
   socket.on(USER.MESSAGE, ({ message, roomId, type }) => {
-    console.log("message", message, type);
     const clients = getClientsInRoom(roomId);
     const time = Date.now();
     clients.forEach(({ socketId }) => {
@@ -90,14 +87,12 @@ io.on("connection", (socket) => {
   });
 
   socket.on(USER.FOCUS_ON, ({ roomId }) => {
-    console.log("focus on", usersMap[socket.id]);
     socket.in(roomId).emit(USER.FOCUS_ON, {
       socketId: socket.id,
     });
   });
 
   socket.on(USER.FOCUS_OFF, ({ roomId }) => {
-    console.log("focus off", usersMap[socket.id]);
     socket.in(roomId).emit(USER.FOCUS_OFF, {
       socketId: socket.id,
     });
@@ -111,7 +106,6 @@ io.on("connection", (socket) => {
         username: usersMap[socket.id],
       });
     });
-    console.log("user leaving", usersMap[socket.id]);
     delete usersMap[socket.id];
     socket.leave();
   });

@@ -20,13 +20,12 @@ export const compileCode = async (code, language) => {
     };
 
     let reqOptions = {
-      url: `http://192.168.0.141:4000/api/compile`,
+      url: `${process.env.REACT_APP_BACKEND_COMPILER}/api/compile`,
       method: "POST",
       data: bodyContent,
     };
 
     let response = await axios.request(reqOptions);
-    console.log(response.data);
     return response.data;
   } catch {
     return {
