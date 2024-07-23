@@ -14,9 +14,9 @@ const Wrapper = ({ children }) => {
           Check my portfolio website
           <a
             className="text-red-500 font-bold underline"
-            href="https://github.com/CodevTogether"
+            href="https://abhishek.chorotiya.com/"
           >
-            {"https://github.com/CodevTogether"}
+            {"https://abhishek.chorotiya.com/"}
           </a>
         </div>
       </div>
