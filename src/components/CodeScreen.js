@@ -36,6 +36,7 @@ function CodeScreen() {
     localStorage?.getItem("theme") || "blue"
   );
   const [language, setLanguage] = useState("javascript");
+  const timeoutRef = useRef(null);
 
   useEffect(() => {
     if (language === "javascript") {
@@ -61,6 +62,15 @@ function CodeScreen() {
   }, [language]);
 
   const handleRun = async () => {
+    toast.loading("Compiling...", {
+      id: "compiling",
+    });
+    timeoutRef.current = setTimeout(() => {
+      toast.dismiss("compiling");
+      toast.error("Compilation timed out", {
+        id: "compiling",
+      });
+    }, 10000);
     const res = await compileCode(code, language);
     if (res) {
       setOutput(res);
@@ -70,6 +80,8 @@ function CodeScreen() {
         roomId,
       });
     }
+    clearTimeout(timeoutRef.current);
+    toast.dismiss("compiling");
   };
   const handleCode = (code) => {
     socketRef.current.emit(CODE.CHANGE, {
