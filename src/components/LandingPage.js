@@ -16,6 +16,31 @@ const LandingPage = () => {
   const query = new URLSearchParams(window.location.search);
   const roomId = query.get("roomId");
 
+  const handleJoin = () => {
+    if (username && id) {
+      navigate(`/${id}`, {
+        state: {
+          username,
+        },
+      });
+    } else {
+      setError(true);
+      setTimeout(() => setError(false), 3000);
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleJoin();
+    });
+
+    return () => {
+      window.removeEventListener("keydown", (e) => {
+        if (e.key === "Enter") handleJoin();
+      });
+    };
+  }, [username, id]);
+
   useEffect(() => setId(roomId), [roomId]);
 
   return (
@@ -90,18 +115,7 @@ const LandingPage = () => {
               Generate Room ID
             </h2>
             <button
-              onClick={() => {
-                if (username && id) {
-                  navigate(`/${id}`, {
-                    state: {
-                      username,
-                    },
-                  });
-                } else {
-                  setError(true);
-                  setTimeout(() => setError(false), 3000);
-                }
-              }}
+              onClick={handleJoin}
               className={`bg-secondary font-semibold w-full h-12 rounded-sm ${
                 themeColor === "dark" ? "text-background" : "text-white"
               }`}
