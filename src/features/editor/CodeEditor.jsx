@@ -23,8 +23,8 @@ export function CodeEditor({ language, code, onChange }) {
     <CodeMirror
       value={code}
       aria-label="Collaborative code editor"
-      className="min-h-full w-full shrink-0"
-      minHeight="100%"
+      className="code-editor h-full min-h-0 w-full"
+      height="100%"
       extensions={extensions}
       onChange={onChange}
     />

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, Clipboard, LogOut, UserRound } from "lucide-react";
+import { ChevronRight, Clipboard, LogOut, Menu, UserRound } from "lucide-react";
 import toast from "react-hot-toast";
 
 function IconButton({ label, onClick, children, danger = false }) {
@@ -34,9 +34,19 @@ export function RoomSidebar({ users, roomId, onLeave }) {
 
   return (
     <>
+      {!expanded && (
+        <button
+          type="button"
+          className="fixed left-5 top-5 z-[60] flex size-10 items-center justify-center rounded-lg bg-background text-primary shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary md:hidden"
+          aria-label="Open participants"
+          onClick={() => setExpanded(true)}
+        >
+          <Menu className="size-5" aria-hidden="true" />
+        </button>
+      )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col justify-between bg-background p-2 shadow-xl transition-[width] duration-200 ${
-          expanded ? "w-72" : "w-16"
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col justify-between bg-background p-2 shadow-xl transition-[width,transform] duration-200 ${
+          expanded ? "w-72 translate-x-0" : "w-16 -translate-x-full md:translate-x-0"
         }`}
         aria-label="Room participants"
       >

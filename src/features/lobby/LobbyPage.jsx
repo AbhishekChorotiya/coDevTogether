@@ -11,7 +11,7 @@ export function LobbyPage() {
   const [username, setUsername] = useState("");
   const [roomId, setRoomId] = useState(() => normalizeRoomId(searchParams.get("roomId") || ""));
   const [error, setError] = useState("");
-  const { theme, setTheme, themes } = useTheme();
+  const { theme, setTheme, themeOptions } = useTheme();
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -28,25 +28,20 @@ export function LobbyPage() {
     });
   }
 
-  const themeOptions = themes.map((value) => ({
-    value,
-    label: value[0].toUpperCase() + value.slice(1),
-  }));
-
   return (
-    <div className={`${theme} min-h-dvh bg-foreground text-primary`}>
-      <header className="flex items-center justify-between bg-background px-5 py-4 shadow-sm sm:px-10 md:px-20">
-        <a href="/" className="text-lg font-bold tracking-tight sm:text-2xl">{"<CoDevTogether />"}</a>
-        <Select label="Color theme" value={theme} options={themeOptions} onChange={setTheme} />
+    <div className={`${theme} grid min-h-dvh grid-rows-[auto_minmax(0,1fr)] overflow-x-hidden bg-foreground text-primary`}>
+      <header className="flex items-center justify-between gap-3 bg-background px-4 py-3 shadow-sm sm:px-10 sm:py-4 md:px-20">
+        <a href="/" className="truncate text-base font-bold tracking-tight sm:text-2xl">{"<CoDevTogether />"}</a>
+        <Select label="Color theme" value={theme} options={themeOptions} onChange={setTheme} compactOnMobile />
       </header>
 
-      <main className="mx-auto grid min-h-[calc(100dvh-68px)] max-w-6xl items-center gap-10 px-5 py-10 lg:grid-cols-2 lg:px-10">
+      <main className="mx-auto grid min-h-0 w-full max-w-6xl items-center gap-8 px-4 py-8 sm:px-5 sm:py-10 lg:grid-cols-2 lg:gap-10 lg:px-10">
         <section className="max-w-xl">
           <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-secondary">
             <Sparkles className="size-4" aria-hidden="true" />
             Real-time collaborative coding
           </p>
-          <h1 className="text-balance text-4xl font-bold leading-tight sm:text-6xl">
+          <h1 className="text-balance text-3xl font-bold leading-tight sm:text-5xl lg:text-6xl">
             Build ideas together, from anywhere.
           </h1>
           <p className="mt-5 max-w-lg text-balance text-base leading-7 text-secondary sm:text-lg">
@@ -54,7 +49,7 @@ export function LobbyPage() {
           </p>
         </section>
 
-        <form onSubmit={handleSubmit} className="w-full rounded-xl bg-background p-6 shadow-xl sm:p-8" noValidate>
+        <form onSubmit={handleSubmit} className="w-full rounded-xl bg-background p-5 shadow-xl sm:p-8" noValidate>
           <div className="mb-6">
             <h2 className="text-xl font-bold">Join a workspace</h2>
             <p className="mt-1 text-sm text-secondary">Use an invite ID or create a fresh room.</p>

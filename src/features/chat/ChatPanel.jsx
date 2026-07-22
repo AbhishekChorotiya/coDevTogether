@@ -32,7 +32,7 @@ function ChatMessage({ item }) {
   );
 }
 
-export function ChatPanel({ messages, onSend, connectionStatus }) {
+export function ChatPanel({ messages, onSend, connectionStatus, width, mobile = false }) {
   const [text, setText] = useState("");
   const listRef = useRef(null);
 
@@ -47,7 +47,13 @@ export function ChatPanel({ messages, onSend, connectionStatus }) {
   }
 
   return (
-    <section className="relative hidden min-w-72 flex-col overflow-hidden rounded-md bg-background pb-16 xl:flex" aria-label="Room chat">
+    <section
+      className={`relative shrink-0 flex-col overflow-hidden rounded-md bg-background pb-16 ${
+        mobile ? "flex h-full min-w-0 w-full" : "hidden min-w-[260px] xl:flex"
+      }`}
+      style={mobile ? undefined : { width }}
+      aria-label="Room chat"
+    >
       <h2 className="border-b border-foreground px-4 py-3 font-semibold text-primary">Chat</h2>
       <div ref={listRef} className="flex h-full flex-col overflow-y-auto" aria-live="polite">
         {messages.length === 0 && (

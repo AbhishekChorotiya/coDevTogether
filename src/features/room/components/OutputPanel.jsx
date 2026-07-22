@@ -3,7 +3,7 @@ export function OutputPanel({ output }) {
   const content = hasError ? output.stderr : output.stdout;
 
   return (
-    <section className="flex min-h-0 flex-col overflow-hidden rounded bg-foreground p-3" aria-label="Compiler output">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded bg-foreground p-3" aria-label="Compiler output">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="font-semibold text-primary">Output</h2>
         {content && (
