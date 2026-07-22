@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import { Server } from "socket.io";
+import { createCompileRateLimiter, createCompilerHandler } from "./compilerProxy.js";
 import { RoomStore } from "./roomStore.js";
 import { registerSocketHandlers } from "./socketHandlers.js";
 
@@ -38,12 +39,34 @@ registerSocketHandlers(io, new RoomStore());
 
 app.disable("x-powered-by");
 app.get("/health", (_request, response) => response.json({ status: "ok" }));
+app.post(
+  "/api/compile",
+  express.json({ limit: "210kb" }),
+  createCompileRateLimiter(),
+  createCompilerHandler(),
+);
 app.use(express.static(distDirectory, { index: false, maxAge: "1h" }));
 app.use((request, response, next) => {
   if (request.method !== "GET" || request.path.startsWith("/api/")) return next();
   return response.sendFile(path.join(distDirectory, "index.html"));
 });
 app.use((_request, response) => response.status(404).json({ error: "Not found" }));
+app.use((error, _request, response, _next) => {
+  if (error?.type === "entity.too.large") {
+    return response.status(413).json({
+      stdout: "",
+      stderr: "Compilation request exceeds the 210 KB limit.",
+    });
+  }
+  if (error instanceof SyntaxError) {
+    return response.status(400).json({
+      stdout: "",
+      stderr: "Compilation request must contain valid JSON.",
+    });
+  }
+  console.error("Unhandled server error", error);
+  return response.status(500).json({ error: "Internal server error" });
+});
 
 const port = Number(process.env.PORT) || 5000;
 httpServer.listen(port, () => console.log(`CoDevTogether listening on port ${port}`));

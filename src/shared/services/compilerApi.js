@@ -15,11 +15,6 @@ export async function compileCode(code, language, options = {}) {
   }
 
   const baseUrl = (import.meta.env.VITE_COMPILER_API_URL || "").replace(/\/$/, "");
-  if (!baseUrl) {
-    throw new CompilerError(
-      "The compiler service is not configured. Set VITE_COMPILER_API_URL.",
-    );
-  }
 
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const timeoutSignal = AbortSignal.timeout(timeoutMs);
