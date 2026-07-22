@@ -1,6 +1,6 @@
 # CoDevTogether
 
-CoDevTogether is a real-time collaborative coding workspace built with React 19, Vite, Express, and Socket.IO. Create an invite link, edit code with teammates, share problem notes, chat, track presence, and send code to an external compiler service without leaving the room.
+CoDevTogether is a real-time collaborative coding workspace built with React 19, Vite, Express, and Socket.IO. Create an invite link, edit code with teammates, share problem notes, chat, track presence, and compile code without leaving the room.
 
 **Live application:** [codev.abhishekchorotiya.xyz](https://codev.abhishekchorotiya.xyz)
 
@@ -12,8 +12,10 @@ CoDevTogether is a real-time collaborative coding workspace built with React 19,
 - Real-time participant presence and reconnect handling
 - Room chat and server-generated activity messages
 - Remote compilation with timeout and error reporting
-- Blue, red, and dark themes
-- Responsive, keyboard-accessible interface
+- Ocean, Ember, and Midnight themes
+- Mobile workspace tabs and off-canvas participant drawer
+- Resizable desktop code, output, and chat panels
+- Keyboard-accessible dropdowns, tabs, and resize controls
 - Lazy-loaded room and editor bundles
 
 ## Technology
@@ -34,17 +36,22 @@ CoDevTogether is a real-time collaborative coding workspace built with React 19,
 flowchart LR
     A[React client] <-->|Room events| B[Socket.IO server]
     B <--> C[In-memory room store]
-    A -->|Run code| D[Isolated compiler API]
+    A -->|POST /api/compile| B
+    B -->|Proxy request| D[OneCompiler client API]
     B --> E[Built Vite application]
 ```
 
 The server binds each socket to its validated room and keeps one authoritative document snapshot while that room is active. A newly joined participant receives that snapshot once, avoiding peer-to-peer synchronization races. Code edits use last-write-wins synchronization; a CRDT would be the next step for conflict-free simultaneous editing.
 
+## Architecture documentation
+
+- [High-Level Design](docs/HLD.md) — system context, deployment, data flows, security boundaries, scaling, and failure handling
+- [Low-Level Design](docs/LLD.md) — modules, state models, HTTP and socket contracts, validation limits, UI behavior, and testing
+
 ## Requirements
 
 - Node.js 20.19 or newer
 - npm 10 or newer
-- An HTTP compiler service compatible with the request described below
 
 ## Quick start
 
@@ -77,7 +84,7 @@ Vite reads these values from `.env` when it starts:
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `VITE_COMPILER_API_URL` | For compilation | Compiler service base URL, without a trailing `/` |
+| `VITE_COMPILER_API_URL` | No | Alternate compiler proxy URL; leave empty to use this server's `/api/compile` route |
 | `VITE_SOCKET_URL` | No | Socket.IO URL; leave empty for the development proxy or same-origin production |
 
 ### Server
@@ -95,9 +102,9 @@ Example:
 SOCKET_ALLOWED_ORIGINS=https://app.example.com PORT=5000 npm start
 ```
 
-## Compiler API contract
+## Compiler proxy
 
-The client sends `POST {VITE_COMPILER_API_URL}/api/compile` with JSON:
+The client sends `POST /api/compile` to the Express server with JSON:
 
 ```json
 {
@@ -107,7 +114,24 @@ The client sends `POST {VITE_COMPILER_API_URL}/api/compile` with JSON:
 }
 ```
 
-The response should contain string values for `stdout` and `stderr`:
+The server validates the request and forwards it to the OneCompiler client endpoint using this payload shape:
+
+```json
+{
+  "properties": {
+    "language": "javascript",
+    "files": [
+      {
+        "name": "main.js",
+        "content": "console.log('Hello')"
+      }
+    ],
+    "stdin": null
+  }
+}
+```
+
+The browser receives the compiler response, including `stdout` and `stderr`:
 
 ```json
 {
@@ -116,7 +140,7 @@ The response should contain string values for `stdout` and `stderr`:
 }
 ```
 
-Compilation requests are aborted after ten seconds. The compiler must run separately from this application and enforce its own CPU, memory, process, network, and execution-time limits.
+Browser requests are aborted after ten seconds and upstream server requests after nine seconds. The proxy accepts only supported languages, limits code to 200 KB, caps upstream responses, and rate-limits compilation requests per client.
 
 ## Available scripts
 
@@ -147,6 +171,7 @@ Express serves `dist/`, provides `GET /health`, and returns the React applicatio
 
 ```text
 server/
+  compilerProxy.js          Validated OneCompiler client API proxy
   index.js                  HTTP and Socket.IO entry point
   socketHandlers.js         Validation and room event handlers
   roomStore.js              Authoritative active-room state
@@ -164,6 +189,9 @@ src/
     services/               Compiler and socket clients
     utils/                  Room ID helpers
   styles/                   Global styles and theme tokens
+docs/
+  HLD.md                    High-level system design
+  LLD.md                    Low-level implementation design
 ```
 
 ## Verification
@@ -186,7 +214,7 @@ The tests cover lobby validation, compiler payloads, room storage, and protectio
 - Active room state is held in memory and removed when the last participant leaves. Restarts do not preserve rooms.
 - A single server instance is currently assumed. Horizontal scaling requires a shared room store and a Socket.IO adapter such as Redis.
 - Simultaneous edits use last-write-wins behavior rather than operational transforms or a CRDT.
-- Treat the compiler as an untrusted-code boundary and isolate it from this web server.
+- The compiler proxy depends on OneCompiler's client endpoint and should be monitored for upstream contract changes.
 
 ## Contributing
 
