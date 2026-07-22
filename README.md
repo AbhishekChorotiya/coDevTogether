@@ -1,82 +1,73 @@
 # CoDevTogether
 
-CoDevTogether is a real-time collaborative coding platform built using React and Socket.IO. It allows users to code together, chat, and track each other's activities in real time. The backend is powered by Node.js, and the platform supports code compilation in four different languages. Users can create rooms and collaborate on coding projects seamlessly.
+CoDevTogether is a React 19 collaborative coding workspace. A room includes a shared CodeMirror editor, problem notes, presence, chat, themes, and remote code compilation. Socket.IO keeps one authoritative in-memory snapshot per active room so reconnecting and newly joined clients receive deterministic state.
 
-**Live:** https://codev.chorotiya.com/
+## Requirements
 
-## Features
+- Node.js 20.19 or newer
+- npm 10 or newer
+- A compatible compiler API for code execution
 
-- **Real-time Collaboration:** Work together with others in real-time on coding projects.
-- **Live Chat:** Communicate with other users via the integrated chat system.
-- **Code Compilation:** Compile code in four different languages.
-- **Activity Tracking:** Monitor and track users' activities within the platform.
-- **Room Creation:** Create and manage coding rooms for collaborative projects.
-- **Supported Languages:** JavaScript, CPP, Java and Python
-
-## Technologies Used
-
-- **Frontend:** React
-- **Backend:** Node.js
-- **Real-time Communication:** Socket.IO
-- **Code Compilation:** Used One Compiler API
-
-## Screenshots
-
-![App Screenshot](https://abhishek.chorotiya.com/codev1.avif)
-![App Screenshot](https://abhishek.chorotiya.com/codev4.avif)
-![App Screenshot](https://abhishek.chorotiya.com/codev3.avif)
-
-## Installation
-
-### Prerequisites
-
-- Node.js and npm installed
-
-### Clone the Repository
+## Local development
 
 ```bash
-git clone https://github.com/AbhishekChorotiya/coDevTogether.git
-cd CoDevTogether
+npm install
+cp .env.example .env
+npm run server
 ```
 
-### Frontend Setup
+In a second terminal:
 
-1. Install the dependencies.
+```bash
+npm run dev
+```
 
-   ```bash
-   npm install
-   ```
+The Vite app runs at `http://localhost:5173` and proxies Socket.IO to the server on port 5000. Set `VITE_COMPILER_API_URL` in `.env` to enable compilation.
 
-2. Start the frontend development server.
+## Quality checks
 
-   ```bash
-   npm start-dev
-   ```
+```bash
+npm run lint
+npm test
+npm run build
+npm audit
+```
 
-### Backend Setup
+For a production-style run, build the frontend and start the server:
 
-1. Start the backend server.
+```bash
+npm run build
+npm start
+```
 
-   ```bash
-   nodemon server.js
-   ```
+The Express server serves `dist/`, exposes `GET /health`, and falls back to the React app for browser routes.
 
-## Usage
+## Project structure
 
-    1. Open your browser and navigate to `http://localhost:3000` to access the application.
-    2. Create or join a room to start coding collaboratively.
-    3. Use the chat feature to communicate with other users.
-    4. Track activity and compile code in the supported languages.
+```text
+server/
+  index.js                 HTTP and Socket.IO entry point
+  socketHandlers.js        validated room protocol handlers
+  roomStore.js             authoritative active-room state
+src/
+  app/                     routing and application tests
+  features/
+    chat/                  chat UI
+    editor/                editor and language definitions
+    lobby/                 room join experience
+    room/                  room page, panels, and socket session hook
+  shared/
+    components/            reusable accessible controls
+    hooks/                 cross-feature hooks
+    protocol/              client/server event contract
+    services/              compiler and socket clients
+    utils/                 room ID helpers
+  styles/                  global theme and Tailwind styles
+```
 
-## Acknowledgements
+## Security and deployment notes
 
-- [Socket.IO](https://socket.io/)
-- [React](https://reactjs.org/)
-- [Node.js](https://nodejs.org/)
-
-## Contact Information
-
-For any inquiries or clarifications, please contact:
-
-- Name: Abhishek Chorotiya
-- Email: code.abhi8678@gmail.com
+- Set `SOCKET_ALLOWED_ORIGINS` to the public application origin in production.
+- Room IDs are collaboration links, not authentication. Add authenticated room membership before using the app for private code.
+- Code execution belongs in a separately isolated service with CPU, memory, process, network, and execution-time limits. The browser client never executes submitted code itself.
+- Active room state is intentionally in memory and is removed when the last participant leaves. Use a persistent store and a Socket.IO adapter before running multiple server instances.
